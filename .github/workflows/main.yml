@@ -1,0 +1,52 @@
+name: Docker Compose CI with ngrok
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Start Docker Containers
+        run: docker-compose up -d
+
+      - name: Wait for Services to Start
+        run: |
+          echo "Waiting for services to be healthy..."
+          sleep 5
+          docker ps -a
+
+      - name: Set Up ngrok
+        run: |
+          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+          sudo apt update && sudo apt install ngrok
+          ngrok http 8081 > /dev/null &  # Exposing the Yelb UI on port 8081
+          sleep 5  # Give ngrok some time to start
+
+      - name: Get ngrok URL
+        run: |
+          NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+          echo "ngrok URL: $NGROK_URL"
+          echo "Access the application at: $NGROK_URL"
+          echo "NGROK_URL=$NGROK_URL" >> $GITHUB_ENV
+
+      - name: Sleep for 5 Minutes (Allow Browser Access)
+        run: |
+          echo "Sleeping for 5 minutes so you can access the app..."
+          sleep 300
+
+      - name: Stop and Remove Containers
+        run: docker-compose down
