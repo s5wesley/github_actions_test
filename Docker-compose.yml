@@ -1,0 +1,175 @@
+version: "3.3"
+
+services:
+  yelb-ui:
+    image: mreferre/yelb-ui:0.7
+    container_name: yelb-ui
+    expose:
+      - 8081
+      - 80
+    ports:
+      - 8081:80
+    networks:
+      odilia:
+        aliases:
+          - yelb-ui
+    depends_on:
+      - yelb-appserver
+
+  yelb-appserver:
+    image: mreferre/yelb-appserver:0.6
+    container_name: yelb-appserver
+    networks:
+      odilia:
+        aliases:
+          - yelb-appserver
+    depends_on:
+      - redis-server
+      - odilia-redis01
+      - odilia-redis02
+
+  yelb-db:
+    container_name: yelb-db
+    image: mreferre/yelb-db:0.6
+    volumes:
+      - yelb-db-data:/var/lib/postgresql/data
+    depends_on:
+      - odilia-db-replication01
+      - odilia-db-replication02
+      - odilia-db-replication03
+    networks:
+      odilia:
+        aliases:
+          - yelb-db
+
+  odilia-db-replication01:
+    container_name: odilia-db-replication01
+    image: mreferre/yelb-db:0.6
+    volumes:
+      - odilia-db-replication01-data:/var/lib/postgresql/data
+    networks:
+      odilia:
+        aliases:
+          - odilia-db-replication01
+
+  odilia-db-replication02:
+    container_name: odilia-db-replication02
+    image: mreferre/yelb-db:0.6
+    volumes:
+      - odilia-db-replication02-data:/var/lib/postgresql/data
+    networks:
+      odilia:
+        aliases:
+          - odilia-db-replication02
+
+  odilia-db-replication03:
+    container_name: odilia-db-replication03
+    image: mreferre/yelb-db:0.6
+    volumes:
+      - odilia-db-replication03-data:/var/lib/postgresql/data
+    networks:
+      odilia:
+        aliases:
+          - odilia-db-replication03
+
+  odilia-redis-sentinel01:
+    container_name: odilia-redis-sentinel01
+    image: redis:4.0.2
+    command: redis-sentinel /etc/redis/sentinel.conf
+    volumes:
+      - ./odilia-redis-sentinel01:/etc/redis/sentinel.conf
+      - odilia-redis-sentinel01-data:/data
+    networks:
+      odilia:
+        aliases:
+          - odilia-redis-sentinel01
+
+  odilia-redis-sentinel02:
+    container_name: odilia-redis-sentinel02
+    image: redis:4.0.2
+    command: redis-sentinel /etc/redis/sentinel.conf
+    volumes:
+      - ./odilia-redis-sentinel02:/etc/redis/sentinel.conf
+      - odilia-redis-sentinel02-data:/var/lib/redis/data
+      - odilia-redis-sentinel02-data:/data
+    networks:
+      odilia:
+        aliases:
+          - odilia-redis-sentinel02
+
+  odilia-redis-sentinel03:
+    container_name: odilia-redis-sentinel03
+    image: redis:4.0.2
+    command: redis-sentinel /etc/redis/sentinel.conf
+    volumes:
+      - ./odilia-redis-sentinel03:/etc/redis/sentinel.conf
+      - odilia-redis-sentinel03-data:/data
+    networks:
+      odilia:
+        aliases:
+          - odilia-redis-sentinel03
+
+  redis-server:
+    image: redis:4.0.2
+    container_name: redis-server
+    volumes:
+      - ./redis-server:/etc/redis/redis.conf
+      - redis-server-data:/data
+    depends_on:
+      - odilia-redis-sentinel01
+      - odilia-redis-sentinel02
+      - odilia-redis-sentinel03
+      - odilia-redis01
+      - odilia-redis02
+    networks:
+      odilia:
+        aliases:
+          - redis-server
+
+  odilia-redis01:
+    image: redis:4.0.2
+    container_name: odilia-redis01
+    volumes:
+      - ./odilia-redis01:/etc/redis/redis.conf
+      - odilia-redis01-data:/data
+    networks:
+      odilia:
+        aliases:
+          - odilia-redis01
+
+  odilia-redis02:
+    image: redis:4.0.2
+    container_name: odilia-redis02
+    volumes:
+      - ./odilia-redis02:/etc/redis/redis.conf
+      - odilia-redis02-data:/data
+    networks:
+      odilia:
+        aliases:
+          - odilia-redis02
+
+volumes:
+  yelb-db-data:
+    driver: local
+  odilia-db-replication01-data:
+    driver: local
+  odilia-db-replication02-data:
+    driver: local
+  odilia-db-replication03-data:
+    driver: local
+  odilia-redis-sentinel01-data:
+    driver: local
+  odilia-redis-sentinel02-data:
+    driver: local
+  odilia-redis-sentinel03-data:
+    driver: local
+  redis-server-data:
+    driver: local
+  odilia-redis01-data:
+    driver: local
+  odilia-redis02-data:
+    driver: local
+
+networks:
+  odilia:
+    driver: bridge
